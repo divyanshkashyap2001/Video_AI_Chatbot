@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Video AI Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+    <!-- Ambient 3D Glow Orbs -->
+    <div class="ambient-glow orb-cyan"></div>
+    <div class="ambient-glow orb-violet"></div>
+
+    <div class="app-shell">
+
+        <!-- 3D GLASS SIDEBAR -->
+        <aside class="sidebar-panel">
+            <div class="brand-box">
+                <div class="brand-cube"><i class="fa-solid fa-cube"></i></div>
+                <div>
+                    <h2>VIDEO<span>AI</span></h2>
+                    <p>Div Studio</p>
+                </div>
+            </div>
+
+            <a href="{{ url_for('new_chat') }}" class="btn-new-chat">
+                <i class="fa-solid fa-plus"></i> New Session
+            </a>
+
+            <div class="nav-section-title">CHATS & SESSIONS</div>
+
+            <div class="session-scroll-list">
+                {% for cid, c in chats.items()|reverse %}
+                <div class="session-pill {% if cid == chat_id %}active{% endif %}">
+                    <a href="{{ url_for('open_chat', chat_id=cid) }}" class="session-link">
+                        <i class="fa-regular fa-message"></i>
+                        <span>{{ c.title }}</span>
+                    </a>
+                    <form action="{{ url_for('delete_chat', chat_id=cid) }}" method="POST">
+                        <button type="submit" class="btn-del" title="Delete session"><i class="fa-solid fa-trash-can"></i></button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="sidebar-status-box">
+                <div class="status-indicator"></div>
+                <div>
+                    <span class="status-label">ENGINE READY</span>
+                    <p class="status-model">Ollama • llama3.2</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CHAT & VIDEO WORKSPACE -->
+        <main class="chat-viewport">
+            
+            <!-- Topbar Header -->
+            <header class="workspace-topbar">
+                <div>
+                    <h1>Video AI Assistant</h1>
+                    <p>Paste a YouTube URL to get key points, timestamps, and interactive Q&A</p>
+                </div>
+                <div class="mode-pill">
+                    <span class="pulse-dot"></span>
+                    {% if current_chat.video %}VIDEO CHAT MODE{% else %}GENERAL AGENT MODE{% endif %}
+                </div>
+            </header>
+
+            <!-- Video Preview Card (Loads when a video is attached) -->
+            {% if current_chat.video %}
+            <section class="active-video-card">
+                <div class="video-preview-wrapper">
+                    {% if current_chat.video.thumbnail %}
+                    <img src="{{ current_chat.video.thumbnail }}" alt="Video thumbnail">
+                    {% endif %}
+                    <a href="{{ current_chat.video.url }}" target="_blank" class="play-overlay-btn">
+                        <i class="fa-solid fa-play"></i>
+                    </a>
+                </div>
+                <div class="video-meta-content">
+                    <div class="meta-tag-row">
+                        <span class="tag-channel"><i class="fa-solid fa-circle-user"></i> {{ current_chat.video.channel }}</span>
+                        {% if current_chat.video.duration %}
+                        <span class="tag-duration"><i class="fa-regular fa-clock"></i> {{ current_chat.video.duration }}</span>
+                        {% endif %}
+                    </div>
+                    <h3>{{ current_chat.video.title }}</h3>
+                    <p class="active-tag"><i class="fa-solid fa-link"></i> Context linked to conversational engine</p>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Message Stream Area -->
+            <div class="conversation-stream">
+                {% if current_chat.messages|length == 0 %}
+                <div class="empty-conversation-state">
+                    <div class="core-3d-visual">
+                        <div class="orbit-ring"></div>
+                        <div class="glow-core"></div>
+                    </div>
+                    <h2>How can I assist you with your video?</h2>
+                    <p>Paste any YouTube URL in the bar below to extract summaries, timestamps, and key concepts.</p>
+                    <div class="prompt-chips-grid">
+                        <div class="chip">📌 Automatic Transcript Summaries & Key Points</div>
+                        <div class="chip">⏱️ Clickable Timestamps & Semantic Chunks</div>
+                        <div class="chip">🔍 Ask: "show related videos" for direct video links</div>
+                        <div class="chip">💬 General AI queries (Python, coding, concepts, and other things)</div>
+                    </div>
+                </div>
+                {% else %}
+                    {% for m in current_chat.messages %}
+                        {% if m.role == 'user' %}
+                        <div class="chat-row user-row">
+                            <div class="message-bubble user-bubble">
+                                <div class="message-header"><i class="fa-solid fa-user"></i> YOU</div>
+                                <div class="message-text">{{ m.text }}</div>
+                                <span class="message-time">{{ m.time }}</span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="chat-row bot-row">
+                            <div class="bot-icon-badge"><i class="fa-solid fa-robot"></i></div>
+                            <div class="message-bubble bot-bubble">
+                                <div class="message-header"><i class="fa-solid fa-sparkles"></i> VIDEO AI</div>
+                                <div class="message-text">{{ m.text|replace('\n', '<br>')|safe }}</div>
+                                <span class="message-time">{{ m.time }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Related Video Suggestions Cards (Triggered on demand) -->
+                    {% if current_chat.suggestions and current_chat.suggestions|length > 0 %}
+                    <div class="suggestions-container">
+                        <div class="suggestions-header">
+                            <i class="fa-brands fa-youtube"></i> Related YouTube Videos
+                        </div>
+                        <div class="video-cards-grid">
+                            {% for s in current_chat.suggestions %}
+                            <a class="video-suggestion-card" href="{{ s.url }}" target="_blank">
+                                <div class="card-thumb">
+                                    {% if s.thumbnail %}
+                                    <img src="{{ s.thumbnail }}" alt="Thumbnail">
+                                    {% endif %}
+                                    <div class="thumb-hover-glow"><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+                                </div>
+                                <div class="card-info">
+                                    <h4>{{ s.title }}</h4>
+                                    <p>{{ s.channel }}</p>
+                                    <span class="watch-link-btn">Watch on YouTube</span>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Unified Bottom Input Bar -->
+            <form class="unified-input-container" method="POST" action="{{ url_for('index') }}">
+                <div class="input-glass-box">
+                    <i class="fa-solid fa-wand-magic-sparkles input-icon"></i>
+                    <input type="text" name="message" placeholder="Paste YouTube video URL or ask questions..." autocomplete="off" required>
+                    <button type="submit" class="btn-submit">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="input-subnote">Tip: After analyzing any video, type <b>"show related videos"</b> to explore recommended links.</div>
+            </form>
+
+        </main>
+    </div>
+
+</body>
+</html>
